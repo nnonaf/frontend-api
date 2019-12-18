@@ -1,9 +1,9 @@
 swagger: "2.0"
 info:
   version: "0.0.1"
-  title: Hello World App
+  title: Nogab
 # during dev, should point to your local machine
-host: localhost:10010
+host: localhost:4000
 # basePath prefixes all resource paths 
 basePath: /
 # 
@@ -17,44 +17,518 @@ consumes:
 # format of the responses to the client (Accepts)
 produces:
   - application/json
+x-a127-config: {}
+x-a127-services: 
+  defaultQuota:     
+    provider: "volos-quota-memory"
+    options:
+      timeUnit: "minute"
+      interval: 1
+      allow: 40
+  publicQuota:     
+    provider: "volos-quota-memory"
+    options:
+      timeUnit: "minute"
+      interval: 1
+      allow: 20
+  spikearrest:
+    provider: "volos-spikearrest-memory"
+    options:
+      timeUnit: "second"
+      bufferSize: 500
+      allow: 1000
 paths:
-  /hello:
-    # binds a127 app logic to a route
-    x-swagger-router-controller: hello_world
+  /verification:
+    x-swagger-router-controller: user
+    x-a127-apply: 
+      spikearrest: {}
+      defaultQuota: {}
     get:
-      description: Returns 'Hello' to the caller
-      # used as the method name of the controller
-      operationId: hello
+      summary: verify user
+      description: sets the user as verified, used by api server only
+      operationId: verification
+      tags: 
+        - email verification
+      responses:
+        default:
+          description: Default Response 
+          schema:
+            $ref: "#/definitions/DefaultResponse"
+  /recovery:
+    x-swagger-router-controller: user
+    x-a127-apply: 
+      spikearrest: {}
+      defaultQuota: {}
+    get:
+      summary: password recovery
+      description: finalize recover user password, to be used by api server
+      operationId: updateRecovery
+      tags: 
+        - password recovery
+      responses:
+        default:
+          description: Default Response 
+          schema:
+            $ref: "#/definitions/DefaultResponse"
+    post:
+      summary: start password recovery
+      description: initiate password recovery process
+      operationId: startRecovery
+      tags: 
+        - password recovery
       parameters:
-        - name: name
-          in: query
-          description: The name of the person to whom to say hello
-          required: false
+        - in: body
+          name: data
+          schema:
+            type: object
+      responses:
+        default:
+          description: Default Response 
+          schema:
+            $ref: "#/definitions/DefaultResponse"
+  /login:
+    x-swagger-router-controller: auth
+    x-a127-apply: 
+      spikearrest: {}
+      defaultQuota: {}
+    post:
+      summary: login user
+      description: returns the user and token when authentication is successful
+      operationId: login
+      tags: 
+        - login
+      parameters:
+        - in: body
+          name: data
+          schema:
+            type: object
+            required:
+              - email
+              - password
+            properties:
+              email:
+                type: string
+              password:
+                type: string
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: "#/definitions/User"
+        default:
+          description: Default Response 
+          schema:
+            $ref: "#/definitions/DefaultResponse"
+  /users:
+    x-swagger-router-controller: user
+    x-a127-apply: 
+      spikearrest: {}
+      defaultQuota: {}
+    get:
+      summary: get users
+      description: query users that match query parameters
+      operationId: getUsers
+      parameters:
+      - in: header
+        name: authorization
+        type: string
+        required: true
+      tags: 
+        - users
+      responses:
+        200:
+          description: OK
+          schema: {}
+        default:
+          description: Default Response 
+          schema:
+            $ref: "#/definitions/DefaultResponse"
+    post:
+      summary: create user
+      description: creates new user
+      operationId: createUser
+      tags: 
+        - users
+      parameters:
+        - in: body
+          name: data
+          schema:
+            $ref: "#/definitions/NewUser"
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: "#/definitions/User"
+        default:
+          description: Default Response 
+          schema:
+            $ref: "#/definitions/DefaultResponse"
+  /users/{id}:
+    x-swagger-router-controller: user
+    x-a127-apply: 
+      spikearrest: {}
+      defaultQuota: {}
+    parameters:
+      - in: header
+        name: authorization
+        type: string
+        required: true
+    get:
+      summary: get user
+      description: get a user with id
+      operationId: getUser
+      tags: 
+        - users
+      parameters:
+        - in: path
+          name: id
           type: string
+          required: true
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: "#/definitions/User"
+        default:
+          description: Default Response 
+          schema:
+            $ref: "#/definitions/DefaultResponse"
+    put:
+      summary: update user
+      description: updates an existing user
+      operationId: updateUser
+      tags: 
+        - users
+      parameters:
+        - in: path
+          name: id
+          type: string
+          required: true
+        - in: body
+          name: data
+          schema:
+            type: object
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: "#/definitions/User"
+        default:
+          description: Default Response 
+          schema:
+            $ref: "#/definitions/DefaultResponse"
+  /withdrawals:
+    x-swagger-router-controller: withdrawal
+    x-a127-apply: 
+      spikearrest: {}
+      defaultQuota: {}
+    parameters:
+      - in: header
+        name: authorization
+        type: string
+        required: true
+    get:
+      description: Returns withdrawal to the caller
+      operationId: getWithdrawals
+      tags: 
+        - withdrawal
+      responses:
+        default:
+          description: Default Response 
+          schema:
+            $ref: "#/definitions/DefaultResponse"
+    post:
+      summary: create new withdrawal
+      description: creates a new withdrawal
+      operationId: createWithdrawal
+      tags: 
+        - withdrawal
+      x-a127-apply:
+        spikearrest: {}
+      parameters:
+        - in: body
+          name: data
+          schema:
+            $ref: "#/definitions/NewWithdrawal"
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: "#/definitions/Withdrawal"
+        default:
+          description: Default Response 
+          schema:
+            $ref: "#/definitions/DefaultResponse"
+  /withdrawals/{id}:
+    x-swagger-router-controller: withdrawal
+    x-a127-apply: 
+      spikearrest: {}
+      defaultQuota: {}
+    parameters:
+      - in: header
+        name: authorization
+        type: string
+        required: true
+    get:
+      description: Returns a withdrawal to the caller
+      operationId: getWithdrawal
+      tags: 
+        - withdrawal
+      parameters:
+        - in: path
+          name: id
+          type: string
+          required: true
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: "#/definitions/Withdrawal"
+        default:
+          description: Default Response 
+          schema:
+            $ref: "#/definitions/DefaultResponse"
+    put:
+      summary: update withdrawal
+      description: updates a withdrawal
+      operationId: updateWithdrawal
+      tags: 
+        - withdrawal
+      x-a127-apply:
+        spikearrest: {}
+      parameters:
+        - in: path
+          name: id
+          type: string
+          required: true
+        - in: body
+          name: data
+          schema: {}
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: "#/definitions/Withdrawal"
+        default:
+          description: Default Response 
+          schema:
+            $ref: "#/definitions/DefaultResponse"
+  /withdrawalApprove:
+    x-swagger-router-controller: withdrawal
+    x-a127-apply: 
+      spikearrest: {}
+      defaultQuota: {}
+    get:
+      description: approve withdrawal request
+      operationId: approveWithdrawal
+      tags: 
+        - withdrawal
+      responses:
+        default:
+          description: Default Response 
+          schema:
+            $ref: "#/definitions/DefaultResponse"
+  /activityLogs:
+    x-swagger-router-controller: activityLog
+    x-a127-apply: 
+      spikearrest: {}
+      defaultQuota: {}
+    parameters:
+      - in: header
+        name: authorization
+        type: string
+        required: true
+    get:
+      description: Returns logs to the caller
+      operationId: getActivityLogs
+      tags: 
+        - activity logs
+      responses:
+        200:
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/ActivityLog"
+        default:
+          description: Default Response 
+          schema:
+            $ref: "#/definitions/DefaultResponse"
+  /mails:
+    x-swagger-router-controller: mailer
+    x-a127-apply:
+      spikearrest: {}
+      defaultQuota: {}
+    post:
+      description: "For sending mails"
+      summary: "sends mail to a destination from a sender with a body"
+      operationId: sendMail
+      tags: 
+        - mailer
+      parameters:
+        - in: body
+          name: data
+          schema:
+            $ref: "#/definitions/Mail"
+      responses:
+        default:
+          description: Default Response 
+          schema:
+            $ref: "#/definitions/DefaultResponse"
+  /uploads/{id}:
+    x-swagger-router-controller: upload
+    x-a127-apply:
+      spikearrest: {}
+      defaultQuota: {}
+    parameters:
+      - in: header
+        name: authorization
+        type: string
+        required: true
+      - in: path
+        name: id
+        description: "A specific user id"
+        type: string
+        required: true
+    post:
+      description: "Accepts image uploads"
+      summary: "uploads an image an returns a Media object"
+      operationId: upload
+      tags: 
+        - upload
       responses:
         "200":
-          description: Success
+          description: "Success"
           schema:
-            # a pointer to a definition
-            $ref: "#/definitions/HelloWorldResponse"
-        # responses may fall through to errors
+            $ref: "#/definitions/Media"
         default:
-          description: Error
+          description: "Default Response "
           schema:
-            $ref: "#/definitions/ErrorResponse"
-  /swagger:
-    x-swagger-pipe: swagger_raw
+            $ref: "#/definitions/DefaultResponse"
+      parameters:
+        - in: formData
+          name: dir
+          type: string
+        - in: formData
+          name: name
+          type: string
+        - $ref: "#/parameters/File"
+parameters:
+  File:
+    name: file
+    in: formData
+    description: "This is the name of the file being uploaded"
+    type: file
+    required: true
 # complex objects have schema definitions
 definitions:
-  HelloWorldResponse:
-    required:
-      - message
+  ActivityLog:
+    type: object
     properties:
-      message:
+      _id:
         type: string
-  ErrorResponse:
-    required:
-      - message
+      user: {}
+      key:
+        type: string
+      location:
+        type: string
+      activityId:
+        type: string
+      userAgent: {}
+      description:
+        type: string
+  User:
+    type: object
     properties:
-      message:
+      _id:
         type: string
+      _token:
+        type: string
+      firstName:
+        type: string
+      lastName:
+        type: string
+      email:
+        type: string
+      password:
+        type: string
+  Withdrawal:
+    type: object
+    properties:
+      _id:
+        type: string
+      reference:
+        type: string
+      user: {}
+      currency: {}
+      destination: {}
+      amount:
+        type: number
+      fee:
+        type: number
+      canceled:
+        type: boolean
+      rejected:
+        type: boolean
+      approved:
+        type: boolean
+      processing:
+        type: boolean
+      processed:
+        type: boolean
+  NewUser:
+    type: object
+    required:
+      - userName
+      - email
+      - password
+    properties:
+      userName:
+        type: string
+      email:
+        type: string
+      password: 
+        type: string
+      others:
+        type: object
+  NewWithdrawal:
+    type: object
+    required:
+      - user
+      - currency
+      - amount
+      - destination
+    properties:
+      user:
+        type: string
+      currency:
+        type: string
+      amount:
+        type: number
+      destination:
+        type: string
+  Media:
+    type: object
+    properties:
+      url:
+        type: string
+      thumb: 
+        type: string
+  Mail:
+    type: object
+    required:
+      - subject
+      - destination
+      - body
+    properties:
+      subject:
+        type: string
+      sender: 
+        type: string
+      destination:
+        type: string
+      body:
+        type: string
+  DefaultResponse: {}
+
+
